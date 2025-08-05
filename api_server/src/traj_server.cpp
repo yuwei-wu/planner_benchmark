@@ -3,9 +3,8 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "quadrotor_msgs/msg/position_command.hpp"
 #include "std_msgs/msg/empty.hpp"
-#include <poly_lib/traj_data.hpp>
+#include <poly_lib/ros_utils.hpp>
 #include <traj_msgs/msg/single_traj.hpp>
-
 
 rclcpp::Publisher<quadrotor_msgs::msg::PositionCommand>::SharedPtr pos_cmd_pub;
 
@@ -13,23 +12,12 @@ quadrotor_msgs::msg::PositionCommand cmd;
 double pos_gain[3] = {0, 0, 0};
 double vel_gain[3] = {0, 0, 0};
 
-// traj data
-struct TrajData
-{
-  /* info of generated traj */
-  double traj_dur_ = 0, traj_yaw_dur_ = 0;
-  rclcpp::Time start_time_;
-  int dim_;
 
-  traj_opt::Trajectory3D traj_3d_;
-  traj_opt::Trajectory1D traj_yaw_;
-  traj_opt::DiscreteStates traj_discrete_;
-};
 
 using namespace std;
 
 bool receive_traj_ = false;
-TrajData pre_traj_, traj_;
+traj_opt::TrajData pre_traj_, traj_;
 
 double traj_duration_;
 rclcpp::Time start_time_;
@@ -42,179 +30,17 @@ double time_forward_;
 
 void uniformTrajCallback(const traj_msgs::msg::SingleTraj::SharedPtr msg)
 {
-  // # === Identification Info ===
-  // int32 drone_id                    # Unique ID of the drone
-  // int32 traj_id                     # Unique ID of the trajectory instance
-  // builtin_interfaces/Time start_time                # Trajectory start time (seconds, relative or absolute)
-  // builtin_interfaces/Time end_time                  # Trajectory end time (seconds, relative or absolute)
-  
-  // # === Trajectory Type ===
-  // int32 TRAJ_POLYNOMIAL = 0
-  // int32 TRAJ_BSPLINE = 1
-  // int32 TRAJ_DISCRETE = 2
-  // int32 TRAJ_BD_DERIVATIVE = 3
-  
-  // int32 traj_type                   # Specifies which trajectory type is active in this message
-  
-  // # === Trajectory Representations ===
-  // Polynomial polytraj               # Polynomial parameterization (active if traj_type == TRAJ_POLYNOMIAL)
-  // Bspline bsplinetraj               # B-spline parameterization (active if traj_type == TRAJ_BSPLINE)
-  // Discrete discretetraj             # Discrete state-control trajectory (active if traj_type == TRAJ_DISCRETE)
-  // BdDervi bddervitraj               # Boundary Derivatives (active if traj_type == TRAJ_BD_DERIVATIVE)
   start_time_ = msg->start_time;
-
-  // Duration in seconds as double
-  traj_duration_ = msg->duration;
   traj_id_ = msg->traj_id;
-  traj_ = TrajData();  // Resets all members to default values
+  // Duration in seconds as double
 
-  std::vector<traj_opt::Piece<3>> segs_3d;
+  traj_ = traj_opt::TrajData();  // Resets all members to default values
+  SingleTraj2TrajData(msg, traj_);
+  traj_duration_ = traj_.traj_dur_;
 
-  switch (msg->traj_type)
-  {
-  case traj_msgs::msg::SingleTraj::TRAJ_POLY:
-    {
-      for(size_t i = 0; i < msg->polytraj.seg_x.size(); ++i)
-      {
-        Eigen::MatrixXd Coeffs(3, 6);
-        float dt = msg->polytraj.seg_x[i].dt;
-        traj_opt::Piece<3> seg(traj_opt::STANDARD, Coeffs, dt);
-        for(size_t j = 0; j < 6; ++j)
-        {
-          Coeffs(0, j) = msg->polytraj.seg_x[i].coeffs[j];
-          Coeffs(1, j) = msg->polytraj.seg_y[i].coeffs[j];
-          Coeffs(2, j) = msg->polytraj.seg_z[i].coeffs[j];
-        }
-        segs_3d.push_back(seg);
-      }
-      traj_.traj_3d_ = traj_opt::Trajectory3D(segs_3d, traj_duration_);
-      break;
-    }
-  case traj_msgs::msg::SingleTraj::TRAJ_BSPLINE:
-    {
-      std::cout << "Received B-spline trajectory with " << msg->bsplinetraj.pos_pts.size() << " control points." << std::endl;
-      size_t N = msg->bsplinetraj.pos_pts.size() - 1;
-      size_t M = msg->bsplinetraj.knots.size();
-      size_t degree = M - N - 1;
-
-      std::cout << "B-spline degree: " << degree << std::endl;
-
-      Eigen::MatrixXd pos_pts(N + 1, 3);  // N + 1
-      Eigen::VectorXd knots(M);              // N + degree + 1
-      for(size_t i = 0; i < M; ++i)
-      {
-        knots(i) = msg->bsplinetraj.knots[i];
-      }
-      for(size_t i = 0; i <= N; ++i)
-      {
-        pos_pts(i, 0) = msg->bsplinetraj.pos_pts[i].x;
-        pos_pts(i, 1) = msg->bsplinetraj.pos_pts[i].y;
-        pos_pts(i, 2) = msg->bsplinetraj.pos_pts[i].z;
-      }
-
-      for(size_t i = 0; i < M - 2 * degree; i++)
-      {
-        Eigen::MatrixXd cpts(degree + 1, 3);
-        
-        for(size_t j = 0; j <= degree; j++)
-        {
-          cpts.row(j) = pos_pts.row(i + j);
-        }
-
-        double dt = knots(degree + i + 1) - knots(degree + i);
-        traj_opt::Piece<3> seg(traj_opt::BEZIER, cpts, dt, degree);
-        segs_3d.push_back(seg);
-      }
-
-      std::cout << "Total segments in B-spline trajectory: " << segs_3d.size() << std::endl;
-      traj_.traj_3d_ = traj_opt::Trajectory3D(segs_3d, traj_duration_);
-      break;
-    }
-  case traj_msgs::msg::SingleTraj::TRAJ_DISCRETE:
-    {
-      std::vector<Eigen::VectorXd> states;
-      auto distraj = msg->discretetraj;
-      size_t N = distraj.pos_pts.size();
-      double dt = distraj.dt;
-      for(size_t j = 0; j < N; ++j)
-      {
-        Eigen::VectorXd s(9);
-
-        s  << distraj.pos_pts[j].x, distraj.pos_pts[j].y, distraj.pos_pts[j].z,
-              distraj.vel_pts[j].x, distraj.vel_pts[j].y, distraj.vel_pts[j].z,
-              distraj.acc_pts[j].x, distraj.acc_pts[j].y, distraj.acc_pts[j].z;
-        states.push_back(s);
-      }
-      traj_.traj_discrete_ = traj_opt::DiscreteStates(dt, N, states);
-      std::cout << "Received discrete trajectory with " << N << " states." << std::endl;
-      break;
-    }
-
-  case traj_msgs::msg::SingleTraj::TRAJ_BD_DERIV:
-    {
-      std::cout << "Received boundary derivative trajectory." << std::endl;
-
-      size_t N = msg->bddervitraj.durations.size();
-
-      // Helper lambda to convert a geometry_msgs::Point/Vector3 to Eigen::Vector3d
-      auto toEigen = [](const auto& v) {
-        return Eigen::Vector3d(v.x, v.y, v.z);
-      };
-      // Pre-extract references for brevity
-      const auto& start_pos = msg->bddervitraj.start_pos;
-      const auto& start_vel = msg->bddervitraj.start_vel;
-      const auto& start_acc = msg->bddervitraj.start_acc;
-      const auto& end_pos   = msg->bddervitraj.end_pos;
-      const auto& end_vel   = msg->bddervitraj.end_vel;
-      const auto& end_acc   = msg->bddervitraj.end_acc;
-
-      const auto& inner_pos = msg->bddervitraj.inner_pos;
-      const auto& inner_vel = msg->bddervitraj.inner_vel;
-      const auto& inner_acc = msg->bddervitraj.inner_acc;
-
-      for (size_t i = 0; i < N; ++i)
-      {
-        Eigen::MatrixXd boundCond(3, 6);
-
-        // Starting boundary conditions
-        if (i == 0) {
-          boundCond.col(0) = toEigen(start_pos);
-          boundCond.col(1) = toEigen(start_vel);
-          boundCond.col(2) = toEigen(start_acc);
-        } else {
-          boundCond.col(0) = toEigen(inner_pos[i - 1]);
-          boundCond.col(1) = toEigen(inner_vel[i - 1]);
-          boundCond.col(2) = toEigen(inner_acc[i - 1]);
-        }
-
-        // Ending boundary conditions
-        if (i == N - 1) {
-          boundCond.col(3) = toEigen(end_pos);
-          boundCond.col(4) = toEigen(end_vel);
-          boundCond.col(5) = toEigen(end_acc);
-        } else {
-          boundCond.col(3) = toEigen(inner_pos[i]);
-          boundCond.col(4) = toEigen(inner_vel[i]);
-          boundCond.col(5) = toEigen(inner_acc[i]);
-        }
-
-        double dt = msg->bddervitraj.durations[i];
-        traj_opt::Piece<3> seg(traj_opt::BOUNDARY, boundCond, dt);
-        segs_3d.push_back(seg);
-      }
-      traj_.traj_3d_ = traj_opt::Trajectory3D(segs_3d, traj_duration_);
-      break;
-    }
-  default:
-    {
-      RCLCPP_ERROR(rclcpp::get_logger("traj_server"), "Unknown trajectory type: %d", msg->traj_type);
-      return;
-    }
-  }
 
   receive_traj_ = true;
   pre_traj_ = traj_;
-
 }
 
 

@@ -285,7 +285,7 @@ namespace api_server
       if (planner_manager_->swarm_trajs_buf_.size() <= id)
           planner_manager_->swarm_trajs_buf_.resize(id + 1, ego_planner::OneTrajDataOfSwarm{-1});
   
-      const auto &bspline = msg->bsplinetraj;
+      const auto &bspline = msg->splinetraj;
       const auto &pts = bspline.pos_pts;
   
       // Compute swarm start point (De Boor start)
@@ -367,7 +367,7 @@ namespace api_server
           return;
       }
   
-      if (msg->traj[0].bsplinetraj.order != 3)
+      if (msg->traj[0].splinetraj.order != 3)
       {
           RCLCPP_ERROR(node_->get_logger(), "Only support B-spline order equals 3.");
           return;
@@ -381,7 +381,7 @@ namespace api_server
   
       for (size_t i = 0; i < msg->traj.size(); ++i)
       {
-          const auto &bspline = msg->traj[i].bsplinetraj;
+          const auto &bspline = msg->traj[i].splinetraj;
           const auto &pos_pts = bspline.pos_pts;
           const auto &knots = bspline.knots;
   
@@ -876,31 +876,31 @@ namespace api_server
   {
     auto info = &planner_manager_->local_data_;
     
-    traj_msg.traj_type  = traj_msgs::msg::SingleTraj::TRAJ_BSPLINE;
+    traj_msg.traj_type  = traj_msgs::msg::SingleTraj::TRAJ_SPLINE;
     traj_msg.start_time = info->start_time_;
     traj_msg.traj_id = info->traj_id_;
 
 
-    traj_msg.bsplinetraj.order = 3;
+    traj_msg.splinetraj.order = 3;
 
 
     Eigen::MatrixXd pos_pts = info->position_traj_.getControlPoint();
-    traj_msg.bsplinetraj.pos_pts.reserve(pos_pts.cols());
+    traj_msg.splinetraj.pos_pts.reserve(pos_pts.cols());
     for (int i = 0; i < pos_pts.cols(); ++i)
     {
       geometry_msgs::msg::Point pt;
       pt.x = pos_pts(0, i);
       pt.y = pos_pts(1, i);
       pt.z = pos_pts(2, i);
-      traj_msg.bsplinetraj.pos_pts.push_back(pt);
+      traj_msg.splinetraj.pos_pts.push_back(pt);
     }
 
     Eigen::VectorXd knots = info->position_traj_.getKnot();
 
-    traj_msg.bsplinetraj.knots.reserve(knots.rows());
+    traj_msg.splinetraj.knots.reserve(knots.rows());
     for (int i = 0; i < knots.rows(); ++i)
     {
-      traj_msg.bsplinetraj.knots.push_back(knots(i));
+      traj_msg.splinetraj.knots.push_back(knots(i));
     }
 
     traj_msg.duration = info->duration_;
