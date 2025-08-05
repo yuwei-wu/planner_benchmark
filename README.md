@@ -1,6 +1,11 @@
 # UAV planner_benchmark
 
-A lightweight UAV simulation environment for evaluating global and local trajectory optimization and planning in ROS2.
+[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/22.04/)
+![ROS2](https://img.shields.io/badge/ROS2-Humble-blueviolet)
+![Eigen](https://img.shields.io/badge/Eigen-3.x-lightgrey)
+
+
+A lightweight UAV simulation environment for evaluating different levels of global and local trajectory optimization and planning.
 
 
 ## 1. Evaluation Level
@@ -75,6 +80,7 @@ A lightweight UAV simulation environment for evaluating global and local traject
 - Replace <drone_id> with your assigned drone ID.
 
 
+---
 
 ### Level 2: Evaluate the global trajectory optimization given the global map
 
@@ -107,18 +113,8 @@ A lightweight UAV simulation environment for evaluating global and local traject
 - Replace <drone_id> with your assigned drone ID.
 
 
-## 2. Dependencies
 
-* ROS2 Humble
-* Eigen3
-* PCL (Point Cloud Library)
-* `planner_interface` (as a submodule)
-
----
-
-
-
-## 3. Setup
+## 2. Setup
 
 
 ### Build Instructions
