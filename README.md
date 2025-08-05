@@ -139,7 +139,7 @@ colcon build --symlink-install
 
 ```
 source install/setup.bash
-ros2 launch api_server level0_eval.py
+ros2 launch api_server level0_eval.launch.py
 ```
 
 ---
