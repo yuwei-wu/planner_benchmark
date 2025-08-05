@@ -3,6 +3,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     # LaunchConfigurations
@@ -86,7 +87,10 @@ def generate_launch_description():
     obj_num_set_arg = DeclareLaunchArgument('obj_num_set', default_value=obj_num_set, description='Number of objects')
     drone_id_arg = DeclareLaunchArgument('drone_id', default_value=drone_id, description='Drone ID')
 
-    # Ego Planner Node
+    use_ego_node = LaunchConfiguration('use_ego_node', default=False)
+    use_ego_node_cmd = DeclareLaunchArgument('use_ego_node', default_value=use_ego_node, description='Use ego node for simulation')
+
+    # evaluation server node
     api_server_node = Node(
         package='api_server',
         executable='api_server_node',
@@ -203,7 +207,8 @@ def generate_launch_description():
             {'prediction/obj_num': obj_num_set},
             {'prediction/lambda': 1.0},
             {'prediction/predict_rate': 1.0}
-        ]
+        ],
+        condition=IfCondition(use_ego_node)
     )
 
     # Create LaunchDescription
@@ -247,8 +252,8 @@ def generate_launch_description():
     ld.add_action(obj_num_set_arg)
     ld.add_action(drone_id_arg)
 
-
-    # Add Node
+    ld.add_action(use_ego_node_cmd)
     ld.add_action(api_server_node)
+
 
     return ld

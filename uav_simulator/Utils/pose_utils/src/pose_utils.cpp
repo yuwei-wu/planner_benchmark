@@ -437,15 +437,15 @@ mat jacobianU(const colvec& X, const colvec& U, double dt)
   double ro = X(3);
   double pt = X(4);
   double ya = X(5);
-  double vx = X(6);
-  double vy = X(7);
-  double vz = X(8);
-  double ax = U(0);
-  double ay = U(1);
-  double az = U(2);
-  double wx = U(3);
-  double wy = U(4);
-  double wz = U(5);
+  // double vx = X(6);
+  // double vy = X(7);
+  // double vz = X(8);
+  // double ax = U(0);
+  // double ay = U(1);
+  // double az = U(2);
+  // double wx = U(3);
+  // double wy = U(4);
+  // double wz = U(5);
 
   mat G(9,6);
 

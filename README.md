@@ -80,16 +80,10 @@ colcon build --symlink-install
 
 ### Run
 
-At one terminal, run
-```
-ros2 launch api_server rviz.launch.py
-```
-
-Open another terminal, do
 
 ```
-ros2 launch api_server single_run_in_sim.launch.py 
-
+source install/setup.bash
+ros2 launch api_server level0_eval.py
 ```
 
 ---

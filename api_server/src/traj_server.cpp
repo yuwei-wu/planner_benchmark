@@ -130,6 +130,81 @@ void uniformTrajCallback(const traj_msgs::msg::SingleTraj::SharedPtr msg)
       traj_.traj_3d_ = traj_opt::Trajectory3D(segs_3d, traj_duration_);
       break;
     }
+  case traj_msgs::msg::SingleTraj::TRAJ_DISCRETE:
+    {
+      std::vector<Eigen::VectorXd> states;
+      auto distraj = msg->discretetraj;
+      size_t N = distraj.pos_pts.size();
+      double dt = distraj.dt;
+      for(size_t j = 0; j < N; ++j)
+      {
+        Eigen::VectorXd s(9);
+
+        s  << distraj.pos_pts[j].x, distraj.pos_pts[j].y, distraj.pos_pts[j].z,
+              distraj.vel_pts[j].x, distraj.vel_pts[j].y, distraj.vel_pts[j].z,
+              distraj.acc_pts[j].x, distraj.acc_pts[j].y, distraj.acc_pts[j].z;
+        states.push_back(s);
+      }
+      traj_.traj_discrete_ = traj_opt::DiscreteStates(dt, N, states);
+      std::cout << "Received discrete trajectory with " << N << " states." << std::endl;
+      break;
+    }
+
+  case traj_msgs::msg::SingleTraj::TRAJ_BD_DERIV:
+    {
+      std::cout << "Received boundary derivative trajectory." << std::endl;
+
+      size_t N = msg->bddervitraj.durations.size();
+
+      // Helper lambda to convert a geometry_msgs::Point/Vector3 to Eigen::Vector3d
+      auto toEigen = [](const auto& v) {
+        return Eigen::Vector3d(v.x, v.y, v.z);
+      };
+      // Pre-extract references for brevity
+      const auto& start_pos = msg->bddervitraj.start_pos;
+      const auto& start_vel = msg->bddervitraj.start_vel;
+      const auto& start_acc = msg->bddervitraj.start_acc;
+      const auto& end_pos   = msg->bddervitraj.end_pos;
+      const auto& end_vel   = msg->bddervitraj.end_vel;
+      const auto& end_acc   = msg->bddervitraj.end_acc;
+
+      const auto& inner_pos = msg->bddervitraj.inner_pos;
+      const auto& inner_vel = msg->bddervitraj.inner_vel;
+      const auto& inner_acc = msg->bddervitraj.inner_acc;
+
+      for (size_t i = 0; i < N; ++i)
+      {
+        Eigen::MatrixXd boundCond(3, 6);
+
+        // Starting boundary conditions
+        if (i == 0) {
+          boundCond.col(0) = toEigen(start_pos);
+          boundCond.col(1) = toEigen(start_vel);
+          boundCond.col(2) = toEigen(start_acc);
+        } else {
+          boundCond.col(0) = toEigen(inner_pos[i - 1]);
+          boundCond.col(1) = toEigen(inner_vel[i - 1]);
+          boundCond.col(2) = toEigen(inner_acc[i - 1]);
+        }
+
+        // Ending boundary conditions
+        if (i == N - 1) {
+          boundCond.col(3) = toEigen(end_pos);
+          boundCond.col(4) = toEigen(end_vel);
+          boundCond.col(5) = toEigen(end_acc);
+        } else {
+          boundCond.col(3) = toEigen(inner_pos[i]);
+          boundCond.col(4) = toEigen(inner_vel[i]);
+          boundCond.col(5) = toEigen(inner_acc[i]);
+        }
+
+        double dt = msg->bddervitraj.durations[i];
+        traj_opt::Piece<3> seg(traj_opt::BOUNDARY, boundCond, dt);
+        segs_3d.push_back(seg);
+      }
+      traj_.traj_3d_ = traj_opt::Trajectory3D(segs_3d, traj_duration_);
+      break;
+    }
   default:
     {
       RCLCPP_ERROR(rclcpp::get_logger("traj_server"), "Unknown trajectory type: %d", msg->traj_type);
