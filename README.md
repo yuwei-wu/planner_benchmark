@@ -47,7 +47,7 @@ A lightweight UAV simulation environment for evaluating different levels of glob
 
 ---
 
-### Level 1: Evaluate local trajectory planner
+### Level 1: Evaluate local trajectory planner (-ing)
 
 - Use the grid map module used by HKUST Aerial Lab and Fast Lab (take the implementation in the ego planner).
 - Provide a local map, local goal, and initial path (if you need it as an initial guess)
@@ -83,7 +83,7 @@ A lightweight UAV simulation environment for evaluating different levels of glob
 
 ---
 
-### Level 2: Evaluate the global trajectory optimization given the global map
+### Level 2: Evaluate the global trajectory optimization given the global map (not enabled now)
 
 
 #### Bench Outputs (subscribed by your stack):
@@ -136,11 +136,20 @@ colcon build --symlink-install
 
 ### Run
 
+For single drone:
 
 ```
 source install/setup.bash
 ros2 launch api_server level0_eval.launch.py
 ```
+
+For multiple drones:
+
+```
+source install/setup.bash
+ros2 launch api_server level0_eval_swarm.launch.py
+```
+
 
 ---
 

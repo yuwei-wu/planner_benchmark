@@ -10,18 +10,11 @@
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-
 #include "std_msgs/msg/empty.hpp"
 #include "visualization_msgs/msg/marker.hpp"
-
-#include "bspline_opt/bspline_optimizer.h"
-#include "plan_env/grid_map.h"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "traj_utils/msg/data_disp.hpp"
-#include "traj_utils/planning_visualization.h"
 
 #include "api_server/planner_manager.h"
-
 #include "traj_msgs/msg/single_traj.hpp"
 #include "traj_msgs/msg/multi_traj.hpp"
 
@@ -32,7 +25,6 @@ namespace api_server
 
   class ReplanFSM
   {
-
   private:
     /* ---------- flag ---------- */
     enum FSM_EXEC_STATE
@@ -88,23 +80,23 @@ namespace api_server
     void convertTraj(traj_msgs::msg::SingleTraj &traj_msg);
 
 
-
     /* ROS utils */
     rclcpp::Node::SharedPtr node_;
     rclcpp::TimerBase::SharedPtr exec_timer_, safety_timer_;
 
+    // Subscriptions
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr waypoint_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr trigger_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Subscription<traj_msgs::msg::MultiTraj>::SharedPtr swarm_trajs_sub_;
     rclcpp::Subscription<traj_msgs::msg::SingleTraj>::SharedPtr broadcast_bspline_sub_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr trigger_sub_;
 
-    // rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr replan_pub_;
-    // rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr new_pub_;
+    // Publishers
     rclcpp::Publisher<traj_msgs::msg::SingleTraj>::SharedPtr bspline_pub_;
+    rclcpp::Publisher<traj_msgs::msg::SingleTraj>::SharedPtr broadcast_bspline_pub_;
     rclcpp::Publisher<traj_utils::msg::DataDisp>::SharedPtr data_disp_pub_;
     rclcpp::Publisher<traj_msgs::msg::MultiTraj>::SharedPtr swarm_trajs_pub_;
-    rclcpp::Publisher<traj_msgs::msg::SingleTraj>::SharedPtr broadcast_bspline_pub_;
+
 
     /* helper functions */
     bool callReboundReplan(bool flag_use_poly_init, bool flag_randomPolyTraj); // front-end and back-end method
