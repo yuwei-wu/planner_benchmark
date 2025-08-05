@@ -11,7 +11,7 @@ A lightweight UAV simulation environment for evaluating global and local traject
 
 #### Bench Outputs (subscribed by your stack):
 
-1. **Point Cloud**
+1. **Local Point Cloud**
 
    * **Topic:** `/drone_<drone_id>_pcl_render_node/cloud`
    * **Type:** `sensor_msgs/PointCloud2`
@@ -37,15 +37,74 @@ A lightweight UAV simulation environment for evaluating global and local traject
    * **Type:** `quadrotor_msgs/PositionCommand`
    * **Description:** Refers to [PositionCommand](https://github.com/yuwei-wu/planner_benchmark/blob/main/uav_simulator/Utils/quadrotor_msgs/msg/PositionCommand.msg)
 
-- Replace <drone_id> with your assigned drone ID.
+- Replace <drone_id> with your assigned drone ID (default is 0).
 
 ---
 
-### Level 1: Evaluate local trajectory optimization
+### Level 1: Evaluate local trajectory planner
+
+- Use the grid map module used by HKUST Aerial Lab and Fast Lab (take the implementation in the ego planner).
+- Provide a local map, local goal, and initial path (if you need it as an initial guess)
+- Input the generated trajectories.
+
+#### Bench Outputs (subscribed by your stack):
+
+1. **Local Grid Map**
+
+
+2. **Odometry**
+
+   * **Topic:** `/drone_<drone_id>_odom`
+   * **Type:** `nav_msgs/Odometry`
+   * **Description:** Drone's current odometry in simulation.
+
+#### Bench Inputs (published by your stack):
+
+1. **Trajectory**
+
+   * **Topic:** `/drone_<drone_id>_planning/traj`
+   * **Type:** `traj_msgs/SingleTraj`
+   * **Description:** Refers to [SingleTraj](https://github.com/yuwei-wu/planner_interface/blob/main/traj_msgs/msg/SingleTraj.msg)
+
+2. **(Optional) Position Command**
+
+   * **Topic:** `/drone_<drone_id>_planning/pos_cmd`
+   * **Type:** `quadrotor_msgs/PositionCommand`
+   * **Description:** Refers to [PositionCommand](https://github.com/yuwei-wu/planner_benchmark/blob/main/uav_simulator/Utils/quadrotor_msgs/msg/PositionCommand.msg)
+
+- Replace <drone_id> with your assigned drone ID.
+
 
 
 ### Level 2: Evaluate the global trajectory optimization given the global map
 
+
+#### Bench Outputs (subscribed by your stack):
+
+1. **Global Grid Map**
+
+
+2. **Odometry**
+
+   * **Topic:** `/drone_<drone_id>_odom`
+   * **Type:** `nav_msgs/Odometry`
+   * **Description:** Drone's current odometry in simulation.
+
+#### Bench Inputs (published by your stack):
+
+1. **Trajectory**
+
+   * **Topic:** `/drone_<drone_id>_planning/traj`
+   * **Type:** `traj_msgs/SingleTraj`
+   * **Description:** Refers to [SingleTraj](https://github.com/yuwei-wu/planner_interface/blob/main/traj_msgs/msg/SingleTraj.msg)
+
+2. **(Optional) Position Command**
+
+   * **Topic:** `/drone_<drone_id>_planning/pos_cmd`
+   * **Type:** `quadrotor_msgs/PositionCommand`
+   * **Description:** Refers to [PositionCommand](https://github.com/yuwei-wu/planner_benchmark/blob/main/uav_simulator/Utils/quadrotor_msgs/msg/PositionCommand.msg)
+
+- Replace <drone_id> with your assigned drone ID.
 
 
 ## 2. Dependencies
@@ -53,7 +112,7 @@ A lightweight UAV simulation environment for evaluating global and local traject
 * ROS2 Humble
 * Eigen3
 * PCL (Point Cloud Library)
-* `planner_interface` (as submodule)
+* `planner_interface` (as a submodule)
 
 ---
 
