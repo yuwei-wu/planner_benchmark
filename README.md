@@ -3,6 +3,7 @@
 [![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/22.04/)
 ![ROS2](https://img.shields.io/badge/ROS2-Humble-blueviolet)
 ![Eigen](https://img.shields.io/badge/Eigen-3.x-lightgrey)
+![CMake Version](https://img.shields.io/badge/CMake-3.5%2B-blue)
 
 
 A lightweight UAV simulation environment for evaluating different levels of global and local trajectory optimization and planning.
